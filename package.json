@@ -1,0 +1,32 @@
+{
+  "name": "quadrature",
+  "version": "1.0.0",
+  "description": "Use newton-cotes formulas for numerically integrating one-dimensional mathematical functions",
+  "keywords": [
+    "math",
+	"integration",
+	"numerical",
+	"quadrature"
+  ],
+  "homepage": "https://github.com/AdamMcCown/node-quadrature",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AdamMcCown/node-quadrature"
+  },
+  "author": "Adam McCown",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AdamMcCown/node-quadrature/issues"
+  },
+  "devDependencies": {
+    "should": "^5.2.0",
+    "mocha": "^2.2.1"
+  }
+}

@@ -1,4 +1,4 @@
-var Decimal = require('decimal.js');
+
 var formulaes = {
 	'midpoint': function (f, a, b) {
 		return (b - a) * f((a + b) / 2);
