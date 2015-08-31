@@ -20,6 +20,12 @@ describe('Quadrature', function () {
 	var xsinx = function (x) {
 		return x * Math.sin(x);
 	};
+	var sin_inverse_x = function (x) {
+		return Math.sin(1 / x);
+	};
+	var x = function (x) {
+		return x;
+	};
 	
 	describe('Midpoint rule x2 0 to 1', function () {
 		it('one interval', function () {
@@ -154,18 +160,18 @@ describe('Quadrature', function () {
 	describe('improper integrals', function () {
 		var error = 1e-6;
 		describe('gaussian', function () {
-			it('Math.NEGATIVE_INFINITY to 0 should equal 0.5', function () {
-				var sum = quadrature(gaussian, {start: Math.NEGATIVE_INFINITY, end: 0, nintervals: 1000});
+			it('-Infinity to 0 should equal 0.5', function () {
+				var sum = quadrature(gaussian, {start: -Infinity, end: 0, nintervals: 1000});
 				sum.should.be.approximately(0.5, error);
 			});
 			
-			it('0 to Math.POSITIVE_INFINITY should equal 0.5', function () {
-				var sum = quadrature(gaussian, {start: 0, end: Math.POSITIVE_INFINITY, nintervals: 1000});
+			it('0 to Infinity should equal 0.5', function () {
+				var sum = quadrature(gaussian, {start: 0, end: Infinity, nintervals: 1000});
 				sum.should.be.approximately(0.5, error);
 			});
 			
-			it('Math.NEGATIVE_INFINITY to Math.POSITIVE_INFINITY should equal 1', function () {
-				var sum = quadrature(gaussian, {start: Math.NEGATIVE_INFINITY, end: Math.POSITIVE_INFINITY, nintervals: 1000});
+			it('-Infinity to Infinity should equal 1', function () {
+				var sum = quadrature(gaussian, {start: -Infinity, end: Infinity, nintervals: 1000});
 				sum.should.be.approximately(1, error);
 			});
 		});
@@ -176,13 +182,13 @@ describe('Quadrature', function () {
 				sum.should.equal(Infinity);
 			});
 			
-			it('1 to Math.POSITIVE_INFINITY should equal infinity', function () {
-				var sum = quadrature(inverse_x, 1, Math.POSITIVE_INFINITY);
+			it('1 to Infinity should equal infinity', function () {
+				var sum = quadrature(inverse_x, 1, Infinity);
 				sum.should.equal(Infinity);
 			});
 			
-			it('0 to Math.POSITIVE_INFINITY should equal infinity', function () {
-				var sum = quadrature(inverse_x, 0, Math.POSITIVE_INFINITY);
+			it('0 to Infinity should equal infinity', function () {
+				var sum = quadrature(inverse_x, 0, Infinity);
 				sum.should.equal(Infinity);
 			});
 		});
@@ -193,33 +199,81 @@ describe('Quadrature', function () {
 				sum.should.equal(Infinity);
 			});
 			
-			it('1 to Math.POSITIVE_INFINITY should equal 1', function () {
-				var sum = quadrature(inverse_x2, 1, Math.POSITIVE_INFINITY),
+			it('1 to Infinity should equal 1', function () {
+				var sum = quadrature(inverse_x2, 1, Infinity),
 					error = 1e-5;
 				sum.should.be.approximately(1, error);
 			});
 		});
 		
 		describe('1 / sqrt(x)', function () {
+			it('1 to Infinity should equal infinity', function () {
+				var sum = quadrature(inverse_rootx, 1, Infinity);
+				sum.should.equal(Infinity);
+			});
+			
 			it('0 to 1 should equal 2', function () {
 				var sum = quadrature(inverse_rootx, 0, 1, {nintervals: 10000});
 					error = 0.01;
 				sum.should.be.approximately(2, error);
 			});
+		});
+		
+		describe('x^2', function () {
+			it('0 to Infinity should equal infinity', function () {
+				var sum = quadrature(x2, 0, Infinity);
+				sum.should.equal(Infinity);
+			});
 			
-			it('1 to Math.POSITIVE_INFINITY should equal infinity', function () {
-				var sum = quadrature(inverse_rootx, 1, Math.POSITIVE_INFINITY);
+			it('-Infinity to 0 should equal infinity', function () {
+				var sum = quadrature(x2, -Infinity, 0);
+				sum.should.equal(Infinity);
+			});
+			
+			it('-Infinity to Infinity should equal infinity' ,function () {
+				var sum = quadrature(x2, -Infinity, Infinity);
 				sum.should.equal(Infinity);
 			});
 		});
 		
 		describe('xsinx', function () {
-			it('1 to Math.POSITIVE_INFINITY should equal undefined', function () {
-				var sum = quadrature(xsinx, 1, Math.POSITIVE_INFINITY);
+			it.skip('1 to Infinity should equal undefined', function () {
+				var sum = quadrature(xsinx, 1, Infinity);
 				sum.should.equal(undefined);
 			});
 		});
 		
+		describe('x', function () {
+			it('-Infinity to 0 should equal -infinity', function () {
+				var sum = quadrature(x, -Infinity, 0);
+				sum.should.equal(-Infinity);
+			});
+			
+			it('0 to Infinity should equal infinity', function () {
+				var sum = quadrature(x, 0, Infinity);
+				sum.should.equal(Infinity);
+			});
+			
+			it('-Infinity to Infinity should equal 0', function () {
+				var sum = quadrature(x, -Infinity, Infinity);
+				sum.should.be.approximately(0, error);
+			});
+		});
+		
+	});
+	
+	describe('hard to compute integrals with known values', function () {		
+		var error = 1e-2;
+		it('sin(1/x) from 0 to 1/Math.PI should equal -0.073668', function() {
+			var sum = quadrature(sin_inverse_x, 0, 1 / Math.PI);
+			sum.should.be.approximately(-0.073668, error);
+		});
+		
+		it('1/sqrt(x) 0 to 1 should equal 2', function () {
+			var sum = quadrature(inverse_rootx, 0, 1, {nintervals: 10000});
+				error = 0.01;
+			sum.should.be.approximately(2, error);
+		});
 	});
 	
 });

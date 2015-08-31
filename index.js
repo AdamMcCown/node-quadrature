@@ -1,4 +1,4 @@
-
+var Decimal = require('decimal.js');
 var formulaes = {
 	'midpoint': function (f, a, b) {
 		return (b - a) * f((a + b) / 2);
@@ -7,6 +7,8 @@ var formulaes = {
 		return ((b - a) / 2) * (f(a) + f(b));
 	},
 	'simpsons': function (f, a, b) {
+		// return (b.minus(a).dividedBy(6)).times(
+				// f(a).plus(f(a.plus(b).dividedBy(2)).times(4)).plus(f(b)));
 		return ((b - a) / 6) *
 				(f(a) + 4 * f((a + b) / 2) + f(b));
 	},
@@ -29,10 +31,10 @@ module.exports = quadrature;
 *
 * @method quadrature
 * @param {Function} f is the integrand to evaluate
-* @param {Object} options
+* @param {Object} args
 * @return {Number} numerical approximation of integral
 */
-function quadrature(f, a, b, options) {
+function quadrature(f, a, b, args) {
 	//function f check
 	if (typeof f !== 'function') {
 		throw Error('must provide f as a function');
@@ -41,10 +43,11 @@ function quadrature(f, a, b, options) {
 	}
 	
 	//object check
-	if (options && typeof options !== 'object') {
-		throw Error('options argument must be an object');
+	if (args && typeof args !== 'object') {
+		throw Error('args argument must be an object');
 	}
 	
+	var options = clone(args);
 	//set up options
 	if (arguments.length === 4) {
 		options.start = a;
@@ -57,15 +60,17 @@ function quadrature(f, a, b, options) {
 	} else if (arguments.length === 2) {
 		options = a;
 	} else if (arguments.length === 1) {
-		throw Error('must supply arguments a and b or provide options argument');
+		throw Error('must supply arguments a and b or provide args argument');
+	} else {
+		throw Error('invalid number of arguments');
 	}
 	options.nintervals = options.nintervals || 1000;
 	options.rule = options.rule || 'simpsons';
 	
 	//argument validation
-	if (typeof options.start !== 'number' && options.start !== Math.NEGATIVE_INFINITY && options.start !== Math.POSITIVE_INFINITY) {
+	if (typeof options.start !== 'number' && options.start !== -Infinity && options.start !== Infinity) {
 		throw Error('start must be a number');
-	} else if (typeof options.end !== 'number' && options.end !== Math.POSITIVE_INFINITY && options.end !== Math.NEGATIVE_INFINITY) {
+	} else if (typeof options.end !== 'number' && options.end !== Infinity && options.end !== -Infinity) {
 		throw Error('end must be a number');
 	} else if (typeof options.nintervals !== 'number' || options.nintervals <= 0) {
 		throw Error('nintervals must be a positive number');
@@ -73,16 +78,15 @@ function quadrature(f, a, b, options) {
 		throw Error(options.rule + " is not a supported rule");
 	}
 	
-	var sum = calculate(f, options),
-		convergenceTest = testConvergence(f, options, sum);
+	var sum = calculate(f, options);
+		
 	//attempt convergence test
-	
-	if (convergenceTest.converges) {
+	if (testConvergence(f, options, sum)) {
 		return sum;
 	} else {
-		if (convergenceTest.oscillates) {
-			return undefined;
-		} else if (sum >= 0) {
+		//might be a good place to check for 
+		//oscillations and return undefined
+		if (sum >= 0) {
 			return Infinity;
 		} else {
 			return -Infinity;
@@ -100,9 +104,19 @@ function calculate(f, options) {
 		approximation = formulaes[options.rule],
 		newF = f,
 		reverseIntegral = false;
+		
+	//check start === end
+	//then check start > end and switch them if need be
+	if (start === end) {
+		return 0;
+	} else if (start > end) {
+		start = options.end;
+		end = options.start;
+		reverseIntegral = true;
+	}
 	
 	//improper integral check, change of variables to finite interval 
-	if (start === Math.NEGATIVE_INFINITY && end === Math.POSITIVE_INFINITY) {
+	if (start === -Infinity && end === Infinity) {
 		newF = function (t) {
 			//prevent divide by 0
 			if (t === 0) {
@@ -117,7 +131,7 @@ function calculate(f, options) {
 		};
 		start = -1;
 		end = 1;
-	} else if (start !== Math.NEGATIVE_INFINITY && end === Math.POSITIVE_INFINITY) {
+	} else if (start !== -Infinity && end === Infinity) {
 		newF = (function () {
 			var a = start;
 			return function (t) {
@@ -130,7 +144,7 @@ function calculate(f, options) {
 		}());
 		start = 0;
 		end = 1;
-	} else if (start === Math.NEGATIVE_INFINITY && end !== Math.POSITIVE_INFINITY) {
+	} else if (start === -Infinity && end !== Infinity) {
 		newF = (function () {
 			var b = end;
 			return function (t) {
@@ -145,35 +159,25 @@ function calculate(f, options) {
 		end = 1;
 	}
 	
-	//check start === end, do this after above change of variables 
-	//b/c Math.NEGATIVE_INFINITY === Math.POSITIVE_INFINITY
-	//then check start > end and switch them if need be
-	if (start === end) {
-		return 0;
-	} else if (start > end) {
-		var temp = start;
-		start = end;
-		end = temp;
-		reverseIntegral = true;
-	}
+	stepSize = (end - start) / n;
 	
 	//another improper integral check
-	//we want to find the limit as we approach the trouble point
-	//so we evaluate the integral close to the trouble point
+	//we want to find the limit as we approach an end point
+	//so we evaluate the integral close to the end point
 	//and hope the new result is close to the limit if one exists
-	if (f(start) === Infinity || f(start) === -Infinity) {
-		start += 0.000001; //this seemed to smallest value that wouldn't break other tests
-	} else if (f(end) == Infinity || f(end) === -Infinity) {
+	if (newF(start) === Infinity || newF(start) === -Infinity || isNaN(newF(start))) {
+		start += 0.000001 //this seemed to smallest value that wouldn't break tests
+	}
+	if (newF(end) === Infinity || newF(end) === -Infinity || isNaN(newF(end))) {
 		end -= 0.000001;
 	}
 	
-	stepSize = (end - start) / n;
 	for (i = 0; i < n; i += 1) {
 		var a1 = start + stepSize * i,
 			b1 = start + stepSize * (i + 1),
 			approx = approximation(newF, a1, b1);
 		
-		//isNaN check, this would occur if newF or f returned something other than a number
+		//isNaN check, e.g. 0 / 0, sin(infinity), and infinity / infinity return NaN
 		if (isNaN(approx)){
 			throw Error('interval approximation for [' + a1 + ',' + b1 + '] returned ' + approx);	
 		}
@@ -185,38 +189,29 @@ function calculate(f, options) {
 
 function testConvergence(f, options, previousResult) {
 	var i,
-		ITERATIONS = 5,
+		iterations = options.nintervals <= 100 ? 7 : 5,
 		CLOSE = 0.01,
 		converges = false,
-		currentResult,
-		oscillations = 0,
-		oscillates = false,
-		newOptions = clone(options);//we don't want to override original options b/c it may be reused
+		currentResult;
 		
-	//double the n and compare to last result
-	//if the previous and current result are 'CLOSE'
+	//double the intervals and compare to previous result
+	//if the previous and current results are 'CLOSE'
 	//we assume convergence
-	for (i = 0; i < ITERATIONS; i += 1) {
-		newOptions.nintervals *= 2;
-		currentResult = calculate(f, newOptions);
+	for (i = 0; i < iterations; i += 1) {
+		options.nintervals *= 2;
+		currentResult = calculate(f, options);
 		if (Math.abs(previousResult - currentResult) < CLOSE) {
 			converges = true;
 			break;
 		}
-		
-		//try determining oscillation
-		if (previousResult < 0 && (currentResult - previousResult) > 1000) {
-			oscillates = true;
-		} else if (previousResult > 0 && (currentResult - previousResult) < 1000) {
-			oscillates = true;
-		}
 		previousResult = currentResult;
 	}
 	
-	return {
-		converges: converges,
-		oscillates: converges ? false : oscillates
-	};
+	return converges;
+}
+
+function computeLimit(f, a, b) {
+	
 }
 
 function clone(options) {
